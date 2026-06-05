@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     TTF_Font *mainFont = TTF_OpenFont("Roboto-Regular.ttf", 24);
-    if (mainFont == NULL);
+    if (mainFont == NULL)
     {
         printf("Error: failed to initiate main font!\n");
         return 1;
