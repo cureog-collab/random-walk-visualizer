@@ -1,4 +1,6 @@
 #include "agent.h"
+#include "text_handler.h"
+#include <stdio.h>
 
 const char *VALIDOPTS = "i";
 const int mainTabH = 900;
@@ -120,6 +122,11 @@ int main(int argc, char *argv[])
             SDL_SetRenderDrawColor(mainRenderer, 200, 200, 200, 255);
         }
         SDL_RenderFillRect(mainRenderer, &sidebar);
+        // sidebar text
+        char stepText[64];
+        snprintf(stepText, sizeof(stepText), "Steps: %d", agent0.stepsTaken);
+        SDL_Color textColor = darkMode ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){0, 0, 0, 255};
+        drawText(mainRenderer, mainFont, stepText, 20, 20, textColor);
         // agent
         SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 255);
         SDL_RenderDrawLines(mainRenderer, agent0.pAgentPath, agent0.stepsTaken + 1);
