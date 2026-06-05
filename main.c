@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
                     {
                         cameraX += mainEvent.motion.xrel;
                         cameraY += mainEvent.motion.yrel;
+                        printf("the mouse position is x: %f and y: %f\n", cameraX, cameraY);
                     }
             }
         }
