@@ -1,6 +1,10 @@
 #include "agent.h"
 #include "text_handler.h"
-#include <stdio.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_pixels.h>
+#include <SDL2/SDL_rect.h>
+#include <SDL2/SDL_render.h>
+#include <unistd.h>
 
 const char *VALIDOPTS = "i";
 const int mainTabH = 900;
@@ -45,7 +49,6 @@ int main(int argc, char *argv[])
         printf("Error: failed to initiate main font!\n");
         return 1;
     }
-
     SDL_Window *mainTab = SDL_CreateWindow("random walk engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                             mainTabW, mainTabH, 0);
     if (mainTab == NULL)
@@ -61,6 +64,16 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return 1;
     }
+    SDL_Texture *sidebarTexture = SDL_CreateTexture(mainRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET
+                                                    , mainTabW / 5, mainTabH);
+    if (sidebarTexture == NULL)
+    {
+        printf("Error: failed to generate sidebarTexture!\n");
+        SDL_DestroyRenderer(mainRenderer);
+        SDL_DestroyWindow(mainTab);
+        SDL_Quit();
+        return 1;
+    }
     SDL_Event mainEvent;
 
     // for test: initiate a single randomwalk agent
@@ -69,50 +82,88 @@ int main(int argc, char *argv[])
     if (!initAgent(&agent0, startPos0))
     {
         printf("Error: failed to initiate an agent!\n");
+        SDL_DestroyTexture(sidebarTexture);
         SDL_DestroyRenderer(mainRenderer);
         SDL_DestroyWindow(mainTab);
         return 1;
     }
 
+    // the main program loop
+    float zoom = 1.0f;
+    float cameraX = 0;
+    float cameraY = 0;
+    bool isDragging = false;
     bool mainIsOn = true;
     while (mainIsOn)
     {
         // detect input from user
         while (SDL_PollEvent(&mainEvent))
         {
-            // if the user click close, change isOn to false
-            if (mainEvent.type == SDL_QUIT)
-            {
-                mainIsOn = false;
+            switch (mainEvent.type) {
+                // if the user click close, change isOn to false
+                case SDL_QUIT:
+                    mainIsOn = false;
+                    break;
+
+                // if user hold 'ctrl' + scroll mouse, zoom accordingly
+                case SDL_MOUSEWHEEL:
+                    if (SDL_GetModState() & KMOD_CTRL)
+                    {
+                        if (mainEvent.wheel.y > 0)
+                        {
+                            zoom += 0.05f;
+                        }
+                        else if (mainEvent.wheel.y < 0)
+                        {
+                            zoom = (zoom == 0.1f) ? 0.1f : zoom - 0.05f;
+                        }
+                    }
+                
+                // camera panning
+                case SDL_MOUSEBUTTONDOWN:
+                    isDragging = true;
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    isDragging = false;
+                    break;
+                case SDL_MOUSEMOTION:
+                    if (isDragging)
+                    {
+                        cameraX += mainEvent.motion.xrel;
+                        cameraY += mainEvent.motion.yrel;
+                    }
             }
         }
 
-        // TODO: main functions
+        // agent stuff
         if (!updateAgentPos(&agent0))
         {
             printf("Error: failed to realloc more memory for an agent's path!\n");
+            SDL_DestroyTexture(sidebarTexture);
             SDL_DestroyRenderer(mainRenderer);
             SDL_DestroyWindow(mainTab);
             return 1;            
         }
 
         // paint stuff
-        // main background
-        if (darkMode)
-        {
+        SDL_RenderSetScale(mainRenderer, 1.0f, 1.0f);
+        // clear everything
+        SDL_RenderSetViewport(mainRenderer, NULL);
+        if (darkMode) {
             SDL_SetRenderDrawColor(mainRenderer, 10, 10, 10, 255);
-        }
-        else
-        {
+        } else {
             SDL_SetRenderDrawColor(mainRenderer, 240, 240, 240, 255);
         }
-        // main sidebar
         SDL_RenderClear(mainRenderer);
-        SDL_Rect sidebar;
-        sidebar.x = 0;
-        sidebar.y = 0;
-        sidebar.h = mainTabH;
-        sidebar.w = mainTabW / 5;
+
+        // sidebar
+        SDL_SetRenderTarget(mainRenderer, sidebarTexture);
+        SDL_Rect sidebar = {
+        0,
+        0,
+        mainTabW / 5,
+        mainTabH
+        };
         if (darkMode)
         {
             SDL_SetRenderDrawColor(mainRenderer, 40, 40, 40, 255);
@@ -122,20 +173,46 @@ int main(int argc, char *argv[])
             SDL_SetRenderDrawColor(mainRenderer, 200, 200, 200, 255);
         }
         SDL_RenderFillRect(mainRenderer, &sidebar);
+
         // sidebar text
         char stepText[64];
         snprintf(stepText, sizeof(stepText), "Steps: %d", agent0.stepsTaken);
         SDL_Color textColor = darkMode ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){0, 0, 0, 255};
-        drawText(mainRenderer, mainFont, stepText, 20, 20, textColor);
-        // agent
+        if (!drawText(mainRenderer, mainFont, stepText, 20, 20, textColor))
+        {
+            printf("Error: failed to write stats onto sidebar!\n");
+            return 1;
+        }
+
+        // print the sidebarTexture onto the screen
+        SDL_SetRenderTarget(mainRenderer, NULL);
+        SDL_Rect sidebarDst = {0, 0, mainTabW / 5, mainTabH};
+        SDL_RenderCopy(mainRenderer, sidebarTexture, NULL, &sidebarDst);
+
+        // main background
+        SDL_Rect mainCanvas = {
+            mainTabW / 5,
+            0,
+            mainTabW - mainTabW / 5,
+            mainTabH
+
+        };
+        SDL_RenderSetViewport(mainRenderer, &mainCanvas);
+        SDL_RenderSetScale(mainRenderer, zoom, zoom);
+
+        // agent0
         SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 255);
         SDL_RenderDrawLines(mainRenderer, agent0.pAgentPath, agent0.stepsTaken + 1);
+
+        // present the final stuff
         SDL_RenderPresent(mainRenderer);
     }
+
     // clean stuff and turn off the program
     free(agent0.pAgentPath);
     TTF_CloseFont(mainFont);
     TTF_Quit();
+    SDL_DestroyTexture(sidebarTexture);
     SDL_DestroyRenderer(mainRenderer);
     SDL_DestroyWindow(mainTab);
     SDL_Quit();
