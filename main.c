@@ -110,8 +110,11 @@ int main(int argc, char *argv[])
                     break;
 
                 // if the user click SPACE, reset camera settings
-                case SDLK_SPACE:
-                    resetCamera(&mainCam, origin);
+                case SDL_KEYDOWN:
+                    if (mainEvent.key.keysym.sym == SDLK_SPACE)
+                    {
+                        resetCamera(&mainCam, origin);
+                    }
                     break;
             }
 
