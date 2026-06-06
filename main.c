@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
         printf("Error: failed to initiate main font!\n");
         return 1;
     }
-    SDL_Window *mainTab = SDL_CreateWindow("random walk engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    SDL_Window *mainTab = SDL_CreateWindow("random walk visualizer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                             mainTabW, mainTabH, 0);
     if (mainTab == NULL)
     {
