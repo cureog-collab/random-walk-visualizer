@@ -27,3 +27,8 @@ Mouse Wheel: Zoom in and out.
 SPACE: Reset the camera viewport back to the origin (0, 0).
 
 S: Pause / Resume the simulation.
+
+## Dependencies
+
+* **SDL2**
+* **SDL2_ttf**
