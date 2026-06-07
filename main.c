@@ -6,10 +6,12 @@
 #include <SDL2/SDL_pixels.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
+#include <SDL2/SDL_timer.h>
 #include <unistd.h>
 #include <time.h>
 
 const char *VALIDOPTS = "i";
+const int AGENTSIZE = 4;
 const int mainTabH = 900;
 const int mainTabW = 1500;
 
@@ -59,7 +61,7 @@ int main(int argc, char *argv[])
         printf("Error: failed to generate main window!\n");
         return 1;
     }
-    SDL_Renderer *mainRenderer = SDL_CreateRenderer(mainTab, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *mainRenderer = SDL_CreateRenderer(mainTab, -1, SDL_RENDERER_PRESENTVSYNC);
     if (mainRenderer == NULL)
     {
         printf("Error: failed to generate mainRenderer!\n");
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
 
     // for test: initiate a single randomwalk agent
     randomWalkAgent agent0;
-    SDL_Point startPos0 = {900, 450};
+    SDL_Point startPos0 = {0, 0};
     if (!initAgent(&agent0, startPos0))
     {
         printf("Error: failed to initiate an agent!\n");
@@ -97,6 +99,7 @@ int main(int argc, char *argv[])
     camera mainCam;
     SDL_Point origin = {0, 0};
     resetCamera(&mainCam, origin);
+    bool isPausing = false;
     bool mainIsOn = true;
     while (mainIsOn)
     {
@@ -109,12 +112,19 @@ int main(int argc, char *argv[])
                     mainIsOn = false;
                     break;
 
-                // if the user click SPACE, reset camera settings
                 case SDL_KEYDOWN:
+                    // if the user click SPACE, reset camera settings
                     if (mainEvent.key.keysym.sym == SDLK_SPACE)
                     {
                         resetCamera(&mainCam, origin);
                     }
+
+                    // if the user clicks "S", toggle the pause state
+                    else if (mainEvent.key.keysym.sym == SDLK_s)
+                    {
+                        isPausing = !isPausing;
+                    }
+
                     break;
             }
 
@@ -123,14 +133,15 @@ int main(int argc, char *argv[])
         }
 
         // agent stuff
-        if (!updateAgentPos(&agent0))
-        {
-            printf("Error: failed to realloc more memory for an agent's path!\n");
-            SDL_DestroyTexture(sidebarTexture);
-            SDL_DestroyRenderer(mainRenderer);
-            SDL_DestroyWindow(mainTab);
-            return 1;            
-        }
+        if (!isPausing)
+            {if (!updateAgentPos(&agent0))
+            {
+                printf("Error: failed to realloc more memory for an agent's path!\n");
+                SDL_DestroyTexture(sidebarTexture);
+                SDL_DestroyRenderer(mainRenderer);
+                SDL_DestroyWindow(mainTab);
+                return 1;            
+            }}
 
         // paint stuff
         SDL_RenderSetScale(mainRenderer, 1.0f, 1.0f);
@@ -181,21 +192,12 @@ int main(int argc, char *argv[])
         SDL_RenderSetViewport(mainRenderer, &mainCanvas);
 
         // agent0
+        // TODO: make lines that are more crossed darker
         SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 255);
-        
-        // temp buffer to store the will-be-morphed coordinate
-        SDL_Point *renderPath = malloc((agent0.stepsTaken + 1) * sizeof(SDL_Point));
-        if (renderPath != NULL)
+        if (!renderAgent(mainRenderer, &agent0, &mainCam, AGENTSIZE))
         {
-            for (int i = 0; i <= agent0.stepsTaken; i++)
-            {
-                renderPath[i] = cameraMorphPoint(&mainCam, agent0.pAgentPath[i]);
-            }
-            
-            // draw the morphe lines
-            SDL_RenderDrawLines(mainRenderer, renderPath, agent0.stepsTaken + 1);
-            
-            free(renderPath);
+            printf("Error: failed to render agent and its path!\n");
+            return 1;
         }
 
         // present the final stuff
