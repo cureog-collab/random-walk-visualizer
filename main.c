@@ -174,7 +174,14 @@ int main(int argc, char *argv[])
 
         // sidebar text
         char stepText[64];
-        snprintf(stepText, sizeof(stepText), "Steps: %d", agent0.stepsTaken);
+        if (!isPausing)
+        {
+            snprintf(stepText, sizeof(stepText), "Steps: %d", agent0.stepsTaken);
+        }
+        else
+        {
+            snprintf(stepText, sizeof(stepText), "Steps: %d (PAUSED)", agent0.stepsTaken);
+        }
         SDL_Color textColor = darkMode ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){0, 0, 0, 255};
         if (!drawText(mainRenderer, mainFont, stepText, 20, 20, textColor))
         {
