@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <time.h>
 
-const char *VALIDOPTS = "i";
+const char *VALIDOPTS = "db";
 const int AGENTSIZE = 4;
 const int mainTabH = 900;
 const int mainTabW = 1500;
@@ -19,16 +19,21 @@ int main(int argc, char *argv[])
 {
 
     // dark mode toggle for the user
-    bool darkMode = true;
+    bool darkMode = false;
+    bool blendMode = false;
     int opt;
     while ((opt = getopt(argc, argv, VALIDOPTS)) != -1) 
     {
         switch (opt) 
         {
-            case 'i':
-                darkMode = false;
+            case 'd':
+                darkMode = true;
                 break;
-            // the code is a bit chunky, but it's convenient for further expansion
+            
+            case 'b':
+                blendMode = true;
+                break;
+
             case '?':
                 printf("Invalid flag!\n");
                 return 1;
@@ -69,6 +74,10 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return 1;
     }
+    if (blendMode)
+    {
+        SDL_SetRenderDrawBlendMode(mainRenderer, SDL_BLENDMODE_BLEND);
+    }
     SDL_Texture *sidebarTexture = SDL_CreateTexture(mainRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET
                                                     , mainTabW / 5, mainTabH);
     if (sidebarTexture == NULL)
@@ -85,7 +94,7 @@ int main(int argc, char *argv[])
 
     // for test: initiate a single randomwalk agent
     randomWalkAgent agent0;
-    SDL_Point startPos0 = {0, 0};
+    SDL_Point startPos0 = {140, 100};
     if (!initAgent(&agent0, startPos0))
     {
         printf("Error: failed to initiate an agent!\n");
@@ -182,7 +191,7 @@ int main(int argc, char *argv[])
         {
             snprintf(stepText, sizeof(stepText), "Steps: %d (PAUSED)", agent0.stepsTaken);
         }
-        SDL_Color textColor = darkMode ? (SDL_Color){255, 255, 255, 255} : (SDL_Color){0, 0, 0, 255};
+        SDL_Color textColor = darkMode ? (SDL_Color){220, 220, 220, 255} : (SDL_Color){50, 50, 50, 255};
         if (!drawText(mainRenderer, mainFont, stepText, 20, 20, textColor))
         {
             printf("Error: failed to write stats onto sidebar!\n");
@@ -199,8 +208,15 @@ int main(int argc, char *argv[])
         SDL_RenderSetViewport(mainRenderer, &mainCanvas);
 
         // agent0
-        // TODO: make lines that are more crossed darker
-        SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 255);
+        // TODO: make lines that are more often crossed darker
+        if (blendMode)
+        {
+            SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 30);
+        }
+        else
+        {
+            SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 255);
+        }
         if (!renderAgent(mainRenderer, &agent0, &mainCam, AGENTSIZE))
         {
             printf("Error: failed to render agent and its path!\n");

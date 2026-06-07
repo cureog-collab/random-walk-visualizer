@@ -86,6 +86,7 @@ bool renderAgent(SDL_Renderer *renderer, const randomWalkAgent *agent, const cam
 
 
     // draw the agent head
+    SDL_SetRenderDrawColor(renderer, 255, 50, 50, 255);
     SDL_Point headLogicPos = agent->pAgentPath[totSteps];
 
     SDL_FRect worldHead = {
