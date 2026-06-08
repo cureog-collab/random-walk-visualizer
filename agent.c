@@ -9,8 +9,9 @@
 #include <math.h>
 
 void chooseRandomDir(SDL_Point *jump);
-float genGaussianRandom(void);
 void genLevyStep(SDL_Point *jump);
+void genPearsonStep(SDL_Point *jump);
+float genGaussianRandom(void);
 
 const int POSSIBLEJUMPS = 4;
 const int ADDITIONALCAP = 500;
@@ -102,17 +103,20 @@ bool updateAgentPos(randomWalkAgent *agent, const walkModel currModel, grid *age
         }
 
         case MODE_PEARSON:
-            // TODO
-            printf("PEARSON\n");
+        {
+            genPearsonStep(&jump);
+            nextPos.x = currPos.x + jump.x;
+            nextPos.y = currPos.y + jump.y;
             break;
+        }
 
         case MODE_GAUSSIAN:
         {
             float z1 = genGaussianRandom();
             float z2 = genGaussianRandom();
 
-            jump.x = roundf(z1 * GAUSSIANSCALE);
-            jump.y = roundf(z2 * GAUSSIANSCALE);
+            jump.x = (int)roundf(z1 * GAUSSIANSCALE);
+            jump.y = (int)roundf(z2 * GAUSSIANSCALE);
             nextPos.x = currPos.x + jump.x;
             nextPos.y = currPos.y + jump.y;
             break;
@@ -163,8 +167,8 @@ bool renderAgent(SDL_Renderer *renderer, const randomWalkAgent *agent, const cam
         SDL_Point stepPos = agent->pAgentPath[step];
 
         SDL_Point worldPt = {
-            roundf(stepPos.x * AGENTSIZE + (AGENTSIZE / 2.0f)),
-            roundf(stepPos.y * AGENTSIZE + (AGENTSIZE / 2.0f))
+            (int)roundf(stepPos.x * AGENTSIZE + (AGENTSIZE / 2.0f)),
+            (int)roundf(stepPos.y * AGENTSIZE + (AGENTSIZE / 2.0f))
         };
 
         // re-position for camera settings
@@ -245,9 +249,18 @@ void genLevyStep(SDL_Point *jump)
     float v = genGaussianRandom();
     float u = genGaussianRandom() * LEVYSIGMAU;
     float stepMag = u / powf(fabsf(v), 1.0f / LEVYALPHA);
-    float rotateAngle = rand() * 2.0f * (float)M_PI;
+    float rotateAngle = ((float)rand() / (float)RAND_MAX) * 2.0f * (float)M_PI;
 
     // project the step onto x and y axises
-    jump->x = roundf(stepMag * cosf(rotateAngle));
-    jump->y = roundf(stepMag * sinf(rotateAngle));
+    jump->x = (int)roundf(stepMag * cosf(rotateAngle));
+    jump->y = (int)roundf(stepMag * sinf(rotateAngle));
+}
+
+void genPearsonStep(SDL_Point *jump)
+{
+    const int PEARSONSTEP = 3;
+    float rotateAngle = ((float)rand() / (float)RAND_MAX) * 2.0f * (float)M_PI;
+
+    jump->x = (int)roundf(PEARSONSTEP * cosf(rotateAngle));
+    jump->y = (int)roundf(PEARSONSTEP * sinf(rotateAngle));
 }

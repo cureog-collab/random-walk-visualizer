@@ -20,6 +20,8 @@ Launch the program via the generated executable. You can use flags to customize 
 
 -s: Enable self-avoiding walk (SAW) model. The agent's path won't cross itself.
 
+-p: Enable Pearson randomwalk model. The agent's step is fixed but the rotate angle is uniformly distributed.
+
 -g: Enable Gaussian randomwalk model.
 
 -l: Enable Lévy flight model.
