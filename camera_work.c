@@ -50,32 +50,31 @@ bool updateViewport(camera *cam, const SDL_Event *event)
 
         // zoom to cursor
         case SDL_MOUSEWHEEL:
-            if (SDL_GetModState() & KMOD_CTRL)
+        {
+            float currZoom = cam->zoom;
+
+            // get the current mouse position on the screen
+            SDL_Point mousePos;
+            SDL_FPoint worldPos;
+            SDL_GetMouseState(&mousePos.x, &mousePos.y);
+            worldPos.x = (mousePos.x - cam->camPos.x) / (currZoom);
+            worldPos.y = (mousePos.y - cam->camPos.y) / (currZoom);
+
+            // zoom in or out accordingly
+            if (event->wheel.y > 0)
             {
-                float currZoom = cam->zoom;
-
-                // get the current mouse position on the screen
-                SDL_Point mousePos;
-                SDL_FPoint worldPos;
-                SDL_GetMouseState(&mousePos.x, &mousePos.y);
-                worldPos.x = (mousePos.x - cam->camPos.x) / (currZoom);
-                worldPos.y = (mousePos.y - cam->camPos.y) / (currZoom);
-
-                // zoom in or out accordingly
-                if (event->wheel.y > 0)
-                {
-                    cam->zoom = (currZoom < MAXZOOM) ? currZoom * ZOOMSCALE : MAXZOOM;
-                }
-                else
-                {
-                    cam->zoom = (currZoom > MINZOOM) ? currZoom / ZOOMSCALE : MINZOOM;
-                }
-
-                // assign the new camera position
-                cam->camPos.x = mousePos.x - cam->zoom * worldPos.x;
-                cam->camPos.y = mousePos.y - cam->zoom * worldPos.y;
+                cam->zoom = (currZoom < MAXZOOM) ? currZoom * ZOOMSCALE : MAXZOOM;
             }
-        break;
+            else
+            {
+                cam->zoom = (currZoom > MINZOOM) ? currZoom / ZOOMSCALE : MINZOOM;
+            }
+
+            // assign the new camera position
+            cam->camPos.x = mousePos.x - cam->zoom * worldPos.x;
+            cam->camPos.y = mousePos.y - cam->zoom * worldPos.y;
+            break;
+        }
     }
 
     return true;
