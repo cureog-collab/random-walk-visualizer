@@ -1,6 +1,8 @@
 #include "agent.h"
-#include "text_handler.h"
 #include "camera_work.h"
+#include "text_handler.h"
+#include "grid.h"
+
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_pixels.h>
@@ -12,17 +14,25 @@
 #include <unistd.h>
 #include <time.h>
 
-const char *VALIDOPTS = "db";
+const char *VALIDOPTS = "dbsglm";
 const int AGENTSIZE = 4;
+const int ORIGINALGRIDSIZE = 1000;
 const int mainTabH = 900;
 const int mainTabW = 1500;
 
 int main(int argc, char *argv[])
 {
 
-    // dark mode toggle for the user
+    // dark mode toggle
     bool darkMode = false;
+
+    // blend mode toggle
     bool blendMode = false;
+
+    // set default model of the walk
+    walkModel currModel = MODE_PURE_WALK;
+
+    // ============================= check flags =============================
     int opt;
     while ((opt = getopt(argc, argv, VALIDOPTS)) != -1) 
     {
@@ -34,6 +44,22 @@ int main(int argc, char *argv[])
             
             case 'b':
                 blendMode = true;
+                break;
+
+            case 's':
+                currModel = MODE_SAW;
+                break;
+            
+            case 'g':
+                currModel = MODE_GAUSSIAN;
+                break;
+
+            case 'l':
+                currModel = MODE_LEVY;
+                break;
+            
+            case 'm':
+                currModel = MODE_MEW;
                 break;
 
             case '?':
@@ -48,7 +74,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    // initiate the SDL engine, open a window and prepare general stuff
+    // =============== initiate the SDL engine, open a window and prepare general stuff ===============
     SDL_Init(SDL_INIT_VIDEO);
     if (TTF_Init() < 0)
     {
@@ -94,19 +120,29 @@ int main(int argc, char *argv[])
 
     srand(time(NULL));
 
-    // for test: initiate a single randomwalk agent
+    // ========================= initiate a single agent and its grid =========================
+    grid agent0Grid;
+    if (!initGrid(&agent0Grid, ORIGINALGRIDSIZE, ORIGINALGRIDSIZE))
+    {
+        printf("Error: failed to initiate a grid!\n");
+        SDL_DestroyTexture(sidebarTexture);
+        SDL_DestroyRenderer(mainRenderer);
+        SDL_DestroyWindow(mainTab);
+        return 1;
+    }
     randomWalkAgent agent0;
     SDL_Point startPos0 = {140, 100};
     if (!initAgent(&agent0, startPos0))
     {
         printf("Error: failed to initiate an agent!\n");
+        freeGrid(&agent0Grid);
         SDL_DestroyTexture(sidebarTexture);
         SDL_DestroyRenderer(mainRenderer);
         SDL_DestroyWindow(mainTab);
         return 1;
     }
 
-    // the main program loop
+    // =================== the main program loop ===================
     camera mainCam;
     SDL_Point origin = {0, 0};
     resetCamera(&mainCam, origin);
@@ -144,15 +180,15 @@ int main(int argc, char *argv[])
         }
 
         // agent stuff
-        if (!isPausing)
-            {if (!updateAgentPos(&agent0))
-            {
-                printf("Error: failed to realloc more memory for an agent's path!\n");
-                SDL_DestroyTexture(sidebarTexture);
-                SDL_DestroyRenderer(mainRenderer);
-                SDL_DestroyWindow(mainTab);
-                return 1;            
-            }}
+        if (!isPausing && !updateAgentPos(&agent0, currModel, &agent0Grid) && agent0.isAlive)
+        {
+            printf("Error: failed to realloc more memory for an agent's path!\n");
+            freeGrid(&agent0Grid);
+            SDL_DestroyTexture(sidebarTexture);
+            SDL_DestroyRenderer(mainRenderer);
+            SDL_DestroyWindow(mainTab);
+            return 1;
+        }
 
         // paint stuff
         SDL_RenderSetScale(mainRenderer, 1.0f, 1.0f);
@@ -189,7 +225,11 @@ int main(int argc, char *argv[])
         int currentX = agent0.pAgentPath[agent0.stepsTaken].x;
         int currentY = agent0.pAgentPath[agent0.stepsTaken].y;
         double dist = hypot(currentX, currentY);
-        if (!isPausing)
+        if (!agent0.isAlive)
+        {
+            snprintf(stepText, sizeof(stepText), "Steps: %d (DEAD)", agent0.stepsTaken);
+        }
+        else if (!isPausing)
         {
             snprintf(stepText, sizeof(stepText), "Steps: %d", agent0.stepsTaken);
         }
@@ -197,7 +237,7 @@ int main(int argc, char *argv[])
         {
             snprintf(stepText, sizeof(stepText), "Steps: %d (PAUSED)", agent0.stepsTaken);
         }
-        snprintf(distText, sizeof(distText), "Dist to origin (grid unit): %.2f", dist);
+        snprintf(distText, sizeof(distText), "Dist to origin: %.2f", dist);
         SDL_Color textColor = darkMode ? (SDL_Color){220, 220, 220, 255} : (SDL_Color){50, 50, 50, 255};
         
         // steps taken
@@ -224,7 +264,6 @@ int main(int argc, char *argv[])
         SDL_RenderSetViewport(mainRenderer, &mainCanvas);
 
         // agent0
-        // TODO: make lines that are more often crossed darker
         if (blendMode)
         {
             SDL_SetRenderDrawColor(mainRenderer, 255, 50, 50, 30);
@@ -244,6 +283,7 @@ int main(int argc, char *argv[])
     }
 
     // clean stuff and turn off the program
+    freeGrid(&agent0Grid);
     free(agent0.pAgentPath);
     TTF_CloseFont(mainFont);
     TTF_Quit();

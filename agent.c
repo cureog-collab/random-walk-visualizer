@@ -1,17 +1,21 @@
 #include "agent.h"
 #include "camera_work.h"
+#include "grid.h"
+
 #include <SDL2/SDL_pixels.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <stdlib.h>
 
-// TODO: hastable to store coordinates that the agent has already stepped on
+void chooseRandomDir(SDL_Point *jump);
 
-const int additionalCap = 500;
+const int POSSIBLEJUMPS = 4;
+const int ADDITIONALCAP = 500;
 
 // create a randomwalk agent
 bool initAgent(randomWalkAgent *agent, SDL_Point startPos)
 {
+    agent->isAlive = true;
     agent->currCapacity = 1000;
     agent->pAgentPath = malloc(agent->currCapacity * sizeof(SDL_Point));
     if (agent->pAgentPath == NULL)
@@ -24,36 +28,94 @@ bool initAgent(randomWalkAgent *agent, SDL_Point startPos)
 }
 
 // "walk" the agent at each delta time
-bool updateAgentPos(randomWalkAgent *agent)
+bool updateAgentPos(randomWalkAgent *agent, const walkModel currModel, grid *agentGrid)
 {
+    // check if the agent is still alive
+    if (!agent->isAlive)
+    {
+        return false;
+    }
+
     // get the current position of the agent
     SDL_Point currPos = agent->pAgentPath[agent->stepsTaken];
     int currCap = agent->currCapacity;
     // generate a jump value for the agent and evaluate its next position accordingly
     SDL_Point jump = {0, 0};
-    int direction = rand() % 4; 
-    switch (direction)
-    {
-        case 0: jump.y = -1; break; // up
-        case 1: jump.y =  1; break; // down
-        case 2: jump.x = -1; break; // left
-        case 3: jump.x =  1; break; // right
-    }
-
     SDL_Point nextPos;
-    nextPos.x = currPos.x + jump.x;
-    nextPos.y = currPos.y + jump.y;
+
+    switch (currModel)
+    {
+        case MODE_PURE_WALK:
+            chooseRandomDir(&jump);
+            nextPos.x = currPos.x + jump.x;
+            nextPos.y = currPos.y + jump.y;
+            break;
+        case MODE_SAW:
+        {
+            SDL_Point possibleJumps[] = {
+                {0, -1},
+                {0, 1},
+                {-1, 0},
+                {1, 0}
+            };
+            SDL_Point safeJumps[POSSIBLEJUMPS];
+            uint safeCount = 0;
+
+            // scan possible jumps to see if the agent is dead
+            for (int i = 0; i < POSSIBLEJUMPS; i++)
+            {
+                SDL_Point virtualNextPos = {
+                    currPos.x + possibleJumps[i].x,
+                    currPos.y + possibleJumps[i].y                    
+                };
+
+                // if a possible jump is deemed unvisited
+                if (!isVisited(agentGrid, virtualNextPos))
+                {
+                    safeJumps[safeCount] = possibleJumps[i];
+                    safeCount++;
+                }
+            }
+
+            // choose the correct action to do
+            if (safeCount > 0)
+            {
+                jump = safeJumps[rand() % safeCount];
+                nextPos.x = currPos.x + jump.x;
+                nextPos.y = currPos.y + jump.y;
+                markVisited(agentGrid, nextPos);
+            }
+            else
+            {
+                agent->isAlive = false;
+                return false;
+            }
+            break;
+        }
+        case MODE_GAUSSIAN:
+            // TODO
+            printf("GAUSSIAN\n");
+            break;
+        case MODE_LEVY:
+            // TODO
+            printf("LEVY\n");
+            break;
+        case MODE_MEW:
+            // TODO
+            printf("MEW\n");
+            break;
+    }
 
     // check if the capacity of the agent is still big enough
     if (agent->stepsTaken + 1 == currCap)
     {
-        SDL_Point *tempPPath = realloc(agent->pAgentPath, (currCap + additionalCap) * sizeof(SDL_Point));
+        SDL_Point *tempPPath = realloc(agent->pAgentPath, (currCap + ADDITIONALCAP) * sizeof(SDL_Point));
         if (tempPPath == NULL)
         {
             return false;
         }
         agent->pAgentPath = tempPPath;
-        agent->currCapacity += additionalCap;
+        agent->currCapacity += ADDITIONALCAP;
     }
     agent->pAgentPath[agent->stepsTaken + 1] = nextPos;
     agent->stepsTaken++;
@@ -88,7 +150,14 @@ bool renderAgent(SDL_Renderer *renderer, const randomWalkAgent *agent, const cam
 
 
     // draw the agent head
-    SDL_SetRenderDrawColor(renderer, 255, 50, 50, 255);
+    if (agent->isAlive)
+    {
+        SDL_SetRenderDrawColor(renderer, 255, 50, 50, 255);
+    }
+    else
+    {
+        SDL_SetRenderDrawColor(renderer, 110, 110, 110, 255);
+    }
     SDL_Point headLogicPos = agent->pAgentPath[totSteps];
 
     SDL_FRect worldHead = {
@@ -103,4 +172,32 @@ bool renderAgent(SDL_Renderer *renderer, const randomWalkAgent *agent, const cam
     SDL_RenderFillRect(renderer, &renderHead);
 
     return true;
+}
+
+// choose the direction randomly
+void chooseRandomDir(SDL_Point *jump)
+{
+    int direction = rand() % 4; 
+    switch (direction)
+    {
+        // up
+        case 0:
+            jump->y = -1;
+            break;
+
+        // down
+        case 1:
+            jump->y =  1;
+            break;
+
+        // left
+        case 2:
+            jump->x = -1;
+            break;
+
+        // right
+        case 3:
+            jump->x =  1;
+            break;
+    }
 }
