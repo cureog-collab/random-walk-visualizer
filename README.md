@@ -18,6 +18,8 @@ Launch the program via the generated executable. You can use flags to customize 
 
 -b : Enable blend mode. The agent's path will be rendered with alpha blending, making frequently crossed areas appear darker.
 
+-s: Enable self-avoiding walk (SAW) model. The agent's path won't cross itself.
+
 ### Controls
 
 Click & Drag: Pan the camera around the canvas.
