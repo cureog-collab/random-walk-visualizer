@@ -5,6 +5,8 @@
 #include <SDL2/SDL_render.h>
 #include <stdlib.h>
 
+// TODO: hastable to store coordinates that the agent has already stepped on
+
 const int additionalCap = 500;
 
 // create a randomwalk agent

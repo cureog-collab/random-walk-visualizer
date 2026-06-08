@@ -7,6 +7,8 @@
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_timer.h>
+#include <math.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -183,6 +185,10 @@ int main(int argc, char *argv[])
 
         // sidebar text
         char stepText[64];
+        char distText[64];
+        int currentX = agent0.pAgentPath[agent0.stepsTaken].x;
+        int currentY = agent0.pAgentPath[agent0.stepsTaken].y;
+        double dist = hypot(currentX, currentY);
         if (!isPausing)
         {
             snprintf(stepText, sizeof(stepText), "Steps: %d", agent0.stepsTaken);
@@ -191,8 +197,18 @@ int main(int argc, char *argv[])
         {
             snprintf(stepText, sizeof(stepText), "Steps: %d (PAUSED)", agent0.stepsTaken);
         }
+        snprintf(distText, sizeof(distText), "Dist to origin (grid unit): %.2f", dist);
         SDL_Color textColor = darkMode ? (SDL_Color){220, 220, 220, 255} : (SDL_Color){50, 50, 50, 255};
+        
+        // steps taken
         if (!drawText(mainRenderer, mainFont, stepText, 20, 20, textColor))
+        {
+            printf("Error: failed to write stats onto sidebar!\n");
+            return 1;
+        }
+
+        // distance to the origin
+        if (!drawText(mainRenderer, mainFont, distText, 20, 50, textColor))
         {
             printf("Error: failed to write stats onto sidebar!\n");
             return 1;
