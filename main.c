@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <time.h>
 
-const char *VALIDOPTS = "dbsglm";
+const char *VALIDOPTS = "dbspglm";
 const int AGENTSIZE = 4;
 const int ORIGINALGRIDSIZE = 1000;
 const int mainTabH = 900;
@@ -60,6 +60,10 @@ int main(int argc, char *argv[])
             
             case 'm':
                 currModel = MODE_MEW;
+                break;
+
+            case 'p':
+                currModel = MODE_PEARSON;
                 break;
 
             case '?':
@@ -116,6 +120,7 @@ int main(int argc, char *argv[])
         SDL_Quit();
         return 1;
     }
+    
     SDL_Event mainEvent;
 
     srand(time(NULL));
@@ -192,13 +197,19 @@ int main(int argc, char *argv[])
 
         // paint stuff
         SDL_RenderSetScale(mainRenderer, 1.0f, 1.0f);
-        // clear everything
+        
+        // background
         SDL_RenderSetViewport(mainRenderer, NULL);
-        if (darkMode) {
+        if (darkMode)
+        {
             SDL_SetRenderDrawColor(mainRenderer, 10, 10, 10, 255);
-        } else {
+        }
+        else
+        {
             SDL_SetRenderDrawColor(mainRenderer, 240, 240, 240, 255);
         }
+
+        // clear everything
         SDL_RenderClear(mainRenderer);
 
         // sidebar

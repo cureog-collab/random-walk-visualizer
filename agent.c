@@ -6,11 +6,18 @@
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <stdlib.h>
+#include <math.h>
 
 void chooseRandomDir(SDL_Point *jump);
+float genGaussianRandom(void);
+void genLevyStep(SDL_Point *jump);
 
 const int POSSIBLEJUMPS = 4;
 const int ADDITIONALCAP = 500;
+
+const float GAUSSIANSCALE = 3.0f;
+const float LEVYALPHA = 1.5f;
+const float LEVYSIGMAU = 1.0965f;
 
 // create a randomwalk agent
 bool initAgent(randomWalkAgent *agent, SDL_Point startPos)
@@ -50,6 +57,7 @@ bool updateAgentPos(randomWalkAgent *agent, const walkModel currModel, grid *age
             nextPos.x = currPos.x + jump.x;
             nextPos.y = currPos.y + jump.y;
             break;
+
         case MODE_SAW:
         {
             SDL_Point possibleJumps[] = {
@@ -92,14 +100,32 @@ bool updateAgentPos(randomWalkAgent *agent, const walkModel currModel, grid *age
             }
             break;
         }
+
+        case MODE_PEARSON:
+            // TODO
+            printf("PEARSON\n");
+            break;
+
         case MODE_GAUSSIAN:
-            // TODO
-            printf("GAUSSIAN\n");
+        {
+            float z1 = genGaussianRandom();
+            float z2 = genGaussianRandom();
+
+            jump.x = roundf(z1 * GAUSSIANSCALE);
+            jump.y = roundf(z2 * GAUSSIANSCALE);
+            nextPos.x = currPos.x + jump.x;
+            nextPos.y = currPos.y + jump.y;
             break;
+        }
+
         case MODE_LEVY:
-            // TODO
-            printf("LEVY\n");
+        {
+            genLevyStep(&jump);
+            nextPos.x = currPos.x + jump.x;
+            nextPos.y = currPos.y + jump.y;
             break;
+        }
+
         case MODE_MEW:
             // TODO
             printf("MEW\n");
@@ -137,8 +163,8 @@ bool renderAgent(SDL_Renderer *renderer, const randomWalkAgent *agent, const cam
         SDL_Point stepPos = agent->pAgentPath[step];
 
         SDL_Point worldPt = {
-            (int)(stepPos.x * AGENTSIZE + (AGENTSIZE / 2.0f)),
-            (int)(stepPos.y * AGENTSIZE + (AGENTSIZE / 2.0f))
+            roundf(stepPos.x * AGENTSIZE + (AGENTSIZE / 2.0f)),
+            roundf(stepPos.y * AGENTSIZE + (AGENTSIZE / 2.0f))
         };
 
         // re-position for camera settings
@@ -174,6 +200,8 @@ bool renderAgent(SDL_Renderer *renderer, const randomWalkAgent *agent, const cam
     return true;
 }
 
+// ============== helper functions ==============
+
 // choose the direction randomly
 void chooseRandomDir(SDL_Point *jump)
 {
@@ -200,4 +228,26 @@ void chooseRandomDir(SDL_Point *jump)
             jump->x =  1;
             break;
     }
+}
+
+float genGaussianRandom(void)
+{
+    // gen 2 random numbers in the range (0,1]
+    float u1 = (rand() + 1.0f) / ((float)RAND_MAX + 1.0f);
+    float u2 = (rand() + 1.0f) / ((float)RAND_MAX + 1.0f);
+
+    // Box-Muller transform
+    return (sqrtf(-2 * logf(u1)) * sinf(2 * (float)M_PI * u2));
+}
+
+void genLevyStep(SDL_Point *jump)
+{
+    float v = genGaussianRandom();
+    float u = genGaussianRandom() * LEVYSIGMAU;
+    float stepMag = u / powf(fabsf(v), 1.0f / LEVYALPHA);
+    float rotateAngle = rand() * 2.0f * (float)M_PI;
+
+    // project the step onto x and y axises
+    jump->x = roundf(stepMag * cosf(rotateAngle));
+    jump->y = roundf(stepMag * sinf(rotateAngle));
 }

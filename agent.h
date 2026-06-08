@@ -25,10 +25,13 @@ typedef enum {
     // self-avoiding walk
     MODE_SAW,
 
-    // gaussian walk
+    // Pearson's randomwalk
+    MODE_PEARSON,
+
+    // Gaussian walk
     MODE_GAUSSIAN,
 
-    // levy flight
+    // Lévy flight
     MODE_LEVY,
 
     // maximal entropy walk
