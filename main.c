@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     if (optind < argc)
     {
         printf("Error: unexpected argument '%s'!\n", argv[optind]);
-        printf("Usage: %s [-i]\n", argv[0]);
+        printf("Usage: %s [-d] [model-flag]\n", argv[0]);
         return 1;
     }
     
