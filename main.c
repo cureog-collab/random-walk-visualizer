@@ -22,6 +22,8 @@ const int mainTabW = 1500;
 
 int main(int argc, char *argv[])
 {
+    // funny variable to check if the user demands more than one model (which should be deemed illegal)
+    int modelsCount = 0;
 
     // dark mode toggle
     bool darkMode = false;
@@ -48,22 +50,27 @@ int main(int argc, char *argv[])
 
             case 's':
                 currModel = MODE_SAW;
+                modelsCount++;
                 break;
             
             case 'g':
                 currModel = MODE_GAUSSIAN;
+                modelsCount++;
                 break;
 
             case 'l':
                 currModel = MODE_LEVY;
+                modelsCount++;
                 break;
             
             case 'm':
                 currModel = MODE_MEW;
+                modelsCount++;
                 break;
 
             case 'p':
                 currModel = MODE_PEARSON;
+                modelsCount++;
                 break;
 
             case '?':
@@ -74,6 +81,13 @@ int main(int argc, char *argv[])
     if (optind < argc)
     {
         printf("Error: unexpected argument '%s'!\n", argv[optind]);
+        printf("Usage: %s [-d] [model-flag]\n", argv[0]);
+        return 1;
+    }
+
+    if (modelsCount > 1)
+    {
+        printf("Error: can only simulate one model at a time\n");
         printf("Usage: %s [-d] [model-flag]\n", argv[0]);
         return 1;
     }
